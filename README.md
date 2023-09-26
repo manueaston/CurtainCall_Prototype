@@ -4,7 +4,7 @@ Created by Manu Easton, Glyn Fleming-Bone, Eunby Hwang, James Joson and Joanna W
 <h2>About</h2>
 Third game prototype created for Rapid Games Prototyping class, Year 2, Semester 2
 
-Created in Unity 2021.3.11f1
+Created in Unity 2021.3.18f1
 
 Group Project
 
@@ -32,5 +32,5 @@ Chosen artist: Boris Groh https://www.artstation.com/borisgroh
 <h2>Installation</h2>
 
 1. Download this project as zip and extract it
-2. Open Project folder in Unity Editor 2021.3.11f1
+2. Open Project folder in Unity Editor 2021.3.18f1
  
