@@ -12,6 +12,15 @@ Game: Curtain Call
 
 Game is a prototype created within 8 days in a team of developers and artists based on a given prompt
 
+Curtain Call is a moody stealth game set in a theatre play, in which you must avoid bizarre cutout monsters and make it through each act without being caught
+
+Contributions:
+- Enemy behaviour
+- Lighting system
+- Player movement - crouching and moving stage light
+- Shadow-casting obstacles for the player to hide behind
+- Level design
+
 <h2>Goal and requirements</h2>
 Prompt: Pick one set of images from an artist and match that art style as closely as reasonable
 
