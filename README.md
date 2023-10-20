@@ -10,7 +10,9 @@ Group Project
 
 Game: Curtain Call
 
-Game is a prototype created within 8 days in a team of developers and artists based on a given prompt
+Game was originally a prototype created within 8 days in a team of developers and artists based on a given prompt
+
+It was further developed over an additional three weeks for a mini-production assignment. This involved a complete asset switch of 2d to 3d, a lighting system change, level redesigns, a new enemy type, a final boss fight and a new narrative.
 
 Curtain Call is a moody stealth game set in a theatre play, in which you must avoid bizarre cutout monsters and make it through each act without being caught
 
