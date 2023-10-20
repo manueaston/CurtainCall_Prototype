@@ -11,12 +11,14 @@ public class WatcherEnemy : MonoBehaviour
     public float maxWatchTime;
 
     public float peekTime;
+    [SerializeField] bool stationary = false;
     bool peeking = false;
 
     public float minWaitTime;
     public float maxWaitTime;
 
-    bool active;
+    bool active = true;
+    bool lit = false;
 
     private float spotAngle;
 
@@ -29,23 +31,27 @@ public class WatcherEnemy : MonoBehaviour
     {
         lightComponent = transform.GetChild(0).GetComponent<Light>();
         maxIntensity = lightComponent.intensity;
-        active = false;
 
-        spotAngle = lightComponent.spotAngle;
+        Debug.Log(lightComponent.spotAngle);
+        spotAngle = lightComponent.spotAngle - 20;
 
-        StartCoroutine(Show());
+
+        if (!stationary)
+        {
+            active = false;
+            StartCoroutine(Show());
+        }
     }
 
     private void Update()
     {
-        if (!active)
+        if (!active || lit)
         {
             return;
         }
 
-
         Vector3 lightDirection = lightComponent.transform.TransformDirection(Vector3.forward);
-   
+
         RaycastHit hit;
         for (float angle = (spotAngle / 2); angle > -(spotAngle / 2); angle -= (spotAngle / 10))
         {
@@ -117,6 +123,41 @@ public class WatcherEnemy : MonoBehaviour
         if (peeking)
         {
             StartCoroutine(Flicker());
+        }
+    }
+
+    public bool IsLit()
+    {
+        return lit;
+    }
+
+    public IEnumerator Lit()
+    {
+        if (!lit)
+        {
+            croak.Play();
+            lit = true;
+
+            // Deactivate
+            yield return StartCoroutine(Move(-1.9f));
+            active = false;
+
+            yield return new WaitForSeconds(1.0f);
+            lit = false;
+
+            // Peek
+            yield return StartCoroutine(Move(0.4f));
+            yield return StartCoroutine(Move(-0.5f));
+            yield return StartCoroutine(Move(0.5f));
+            yield return StartCoroutine(Move(-0.2f));
+            yield return StartCoroutine(Move(0.6f));
+            yield return StartCoroutine(Move(-0.8f));
+
+
+            //Reactivate
+            yield return new WaitForSeconds(peekTime);
+            yield return StartCoroutine(Move(1.9f));
+            active = true;
         }
     }
 }

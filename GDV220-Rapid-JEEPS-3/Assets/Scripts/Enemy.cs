@@ -1,47 +1,126 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
-    public float enemySpeed = 0.005f;
-    private bool canMove = true;
-    private float originalY;
-    private float floatStrength = 0.25f;
-
     // components
-    public Rigidbody rb;
-    public SpriteRenderer sr;
-    public Light lightComponent;
+    Rigidbody rb;
+    SpriteRenderer sr;
+    Light lightComponent;
+    Animator anim;
+    public AudioSource audioSource;
 
+    // movement variables
+    public float enemySpeed;
+    public float enemyLungeSpeedMultiplier;
+    public float waitTime;
+    public float range;
+
+    private bool canMove = true;
+    private Vector2 originalPos;
+    private float floatStrength = 0.25f;
+    private bool lunging = false;
+    private int direction;
+
+    // sight variables
     public Transform sightRangePoint;
-    public float sightRange;
+    private float sightRange;
 
-    public float minChangeDirTime;
-    public float maxChangeDirTime;
+    // bossfight params
+    bool active = true;
+    [SerializeField] private float visibleEnemyHeight;
+    [SerializeField] private float invisibleEnemyHeight;
+    public bool boss = false;
+    private bool starting = true;
+    public bool bossStunned = false;
 
-    // Start is called before the first frame update
+    public void IsBossfight()
+    {
+        boss = true;
+        originalPos = new Vector2(transform.position.x, -0.8f);
+    }
+
     void Start()
     {
         rb = gameObject.GetComponent<Rigidbody>();
         sr = gameObject.GetComponent<SpriteRenderer>();
         lightComponent = transform.GetChild(0).GetComponent<Light>();
+        anim = gameObject.GetComponent<Animator>();
+        audioSource = GetComponent<AudioSource>();
 
-        originalY = transform.position.y;
+        originalPos = transform.position;
+        if (transform.rotation.y == 0.0f)
+        {
+            direction = 1;
+        }
+        else
+        {
+            direction = -1;
+        }
 
         sightRange = Vector3.Distance(transform.position, sightRangePoint.position);
-
-        StartCoroutine(ChangeViewDirection());
     }
 
-    // Update is called once per frame
     void Update()
     {
-        // movement
+        lightComponent.enabled = active; // && canMove
+
+        // drop down from top of screen in bossfight
+        if (boss && starting)
+        {
+            originalPos = new Vector2(transform.position.x, -0.8f);
+            if (transform.position.y > originalPos.y)
+            {
+                transform.Translate(0.0f, -enemySpeed * 5.0f * Time.deltaTime, 0.0f);
+            }
+            else
+            {
+                transform.GetChild(0).GetComponent<LockYPos>().YPos = transform.position.y - 0.033f;
+                starting = false;
+            }
+            return;
+        }
+
+        if (boss)
+        {
+            if (bossStunned && transform.position.y > invisibleEnemyHeight)
+            {
+                transform.Translate(0.0f, -enemySpeed * 3.0f * Time.deltaTime, 0.0f);
+            }
+            else if (!bossStunned && transform.position.y < visibleEnemyHeight)
+            {
+                transform.Translate(0.0f, enemySpeed * 3.0f * Time.deltaTime, 0.0f);
+            }
+        }
+
+        if (!active) return;
+
         if (canMove)
         {
-            // movement
+            // horizontal movement
             transform.Translate(new Vector3(enemySpeed * Time.deltaTime, 0.0f, 0.0f));
+
+            // bobbing
+            transform.position = new Vector3(
+            transform.position.x,
+            originalPos.y + ((float)Mathf.Sin(Time.time * 4.0f) * floatStrength),
+            transform.position.z);
+
+            if (!lunging && (transform.position.x < originalPos.x - range || transform.position.x > originalPos.x + range))
+            {
+                if (transform.position.x < originalPos.x - range)
+                {
+                    transform.position = new Vector3(originalPos.x - range, transform.position.y, transform.position.z);
+                }
+                else if (transform.position.x > originalPos.x + range)
+                {
+                    transform.position = new Vector3(originalPos.x + range, transform.position.y, transform.position.z);
+                }
+
+                StartCoroutine(Rotate());
+            }
         }
 
         // checking for player
@@ -51,52 +130,83 @@ public class Enemy : MonoBehaviour
             if (hit.transform.tag == "Player")
             {
                 Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * hit.distance, Color.red);
-                Debug.Log("Did Hit");
 
-                hit.transform.GetComponent<Player>().Die();
-
-                canMove = false;
-                StopCoroutine("ChangeViewDirection");
+                StartCoroutine(Lunge());
             }
-            else
+            else if (canMove) // Doesn't trigger if enemy is waiting
             {
                 Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * hit.distance, Color.white);
-                canMove = false;
+                StartCoroutine(Rotate());
             }
         }
         else
         {
             Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * sightRange, Color.white);
         }
-
-        // bobbing
-        if (!canMove) return;
-        transform.position = new Vector3(
-            transform.position.x,
-            originalY + ((float)Mathf.Sin(Time.time * 4.0f) * floatStrength),
-            transform.position.z
-        );
     }
 
-    IEnumerator ChangeViewDirection()
+    public void BossStunned(bool stunned = true)
     {
+        bossStunned = stunned;
+        if (stunned)
+        {
+            canMove = false;
+            active = false;
+        }
+        else
+        {
+            canMove = true;
+            active = true;
+        }
+    }
+
+    IEnumerator Lunge()
+    {
+        if (lunging) yield break;
+
+        StopCoroutine(Rotate());
+        // anim.SetTrigger("Lunge");
+        lunging = true;
         canMove = true;
 
-        float waitTime = Random.Range(minChangeDirTime, maxChangeDirTime);
-        yield return new WaitForSeconds(waitTime);
-        canMove = false;
-        yield return new WaitForSeconds(3.0f);
+        enemySpeed *= enemyLungeSpeedMultiplier;
+        yield return new WaitForSeconds(2.0f);
+        enemySpeed /= enemyLungeSpeedMultiplier;
 
-        transform.Rotate(0, 180, 0);
+        StartCoroutine(Rotate());
+        lunging = false;
+        // anim.ResetTrigger("Lunge");
+    }
 
-        StartCoroutine(ChangeViewDirection());
+    public IEnumerator Rotate()
+    {
+        yield return Wait();
+
+        // Only rotate if it would be facing the right direction
+        if ((direction == -1 && transform.position.x < originalPos.x)
+            || (direction == 1 && transform.position.x > originalPos.x))
+        {
+            transform.Rotate(new Vector3(0.0f, 180.0f, 0.0f));
+            direction *= -1;
+        }
+
+    }
+    public IEnumerator Wait()
+    {
+        if (!lunging)
+        {
+            canMove = false;
+            yield return new WaitForSeconds(waitTime);
+            canMove = true;
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.transform.tag == "Player")
+        if (other.transform.tag == "Player" && !bossStunned)
         {
             other.transform.GetComponent<Player>().Die(true);
+            canMove = false;
         }
     }
 
